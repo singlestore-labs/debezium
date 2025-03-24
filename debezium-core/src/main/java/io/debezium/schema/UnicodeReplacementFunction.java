@@ -19,8 +19,8 @@ public class UnicodeReplacementFunction implements ReplacementFunction {
     @Override
     public String replace(char invalid) {
         String hex = Integer.toHexString(invalid);
-        if (hex.length() <= 2) {
-            hex = "00" + hex;
+        while (hex.length() < 4) {
+            hex = "0" + hex;
         }
         // Use underscore as escape sequence instead of backslash
         return "_u" + hex;
