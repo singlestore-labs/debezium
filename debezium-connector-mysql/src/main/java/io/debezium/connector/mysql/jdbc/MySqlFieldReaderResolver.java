@@ -6,6 +6,8 @@
 package io.debezium.connector.mysql.jdbc;
 
 import io.debezium.connector.binlog.jdbc.BinlogFieldReader;
+import io.debezium.connector.mariadb.MariaDbConnectorConfig;
+import io.debezium.connector.mariadb.jdbc.MariaDbFieldReader;
 import io.debezium.connector.mysql.MySqlConnectorConfig;
 
 /**
@@ -25,6 +27,9 @@ public final class MySqlFieldReaderResolver {
      * @return the binlog field reader to use; never null
      */
     public static BinlogFieldReader resolve(MySqlConnectorConfig connectorConfig) {
+        if (connectorConfig.usesMariaDbProtocol()) {
+            return new MariaDbFieldReader(new MariaDbConnectorConfig(connectorConfig.getOriginalConfiguration()));
+        }
         if (connectorConfig.useCursorFetch()) {
             return new MySqlBinaryProtocolFieldReader(connectorConfig);
         }
