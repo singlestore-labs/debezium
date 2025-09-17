@@ -28,11 +28,13 @@ import io.debezium.connector.AbstractSourceInfo;
 import io.debezium.connector.SourceInfoStructMaker;
 import io.debezium.connector.binlog.BinlogConnectorConfig;
 import io.debezium.connector.binlog.gtid.GtidSetFactory;
+import io.debezium.connector.mariadb.charset.MariaDbCharsetRegistryServiceProvider;
 import io.debezium.connector.mysql.charset.MySqlCharsetRegistryServiceProvider;
 import io.debezium.connector.mysql.gtid.MySqlGtidSetFactory;
 import io.debezium.connector.mysql.history.MySqlHistoryRecordComparator;
 import io.debezium.function.Predicates;
 import io.debezium.relational.history.HistoryRecordComparator;
+import io.debezium.util.Strings;
 
 /**
  * The configuration properties.
@@ -295,7 +297,7 @@ public class MySqlConnectorConfig extends BinlogConnectorConfig {
             .withType(Type.CLASS)
             .withGroup(Field.createGroupEntry(Field.Group.CONNECTION, 41))
             .withWidth(Width.MEDIUM)
-            .withDefault(com.mysql.cj.jdbc.Driver.class.getName())
+            .withDefault("org.mariadb.jdbc.Driver")
             .withImportance(Importance.LOW)
             .withValidation(Field::isClassName)
             .withDescription("JDBC Driver class name used to connect to the MySQL database server.");
@@ -406,9 +408,11 @@ public class MySqlConnectorConfig extends BinlogConnectorConfig {
     private final SnapshotLockingStrategy snapshotLockingStrategy;
     private final SecureConnectionMode secureConnectionMode;
     private final DdlParserType ddlParserType;
+    private final boolean mariaDbProtocol;
+    private final Configuration originalConfig;
 
     public MySqlConnectorConfig(Configuration config) {
-        super(MySqlConnector.class, config, DEFAULT_SNAPSHOT_FETCH_SIZE);
+        super(MySqlConnector.class, config, usesMariaDbProtocol(config) ? 1 : DEFAULT_SNAPSHOT_FETCH_SIZE);
         this.gtidSetFactory = new MySqlGtidSetFactory();
 
         this.snapshotLockingMode = SnapshotLockingMode.parse(config.getString(SNAPSHOT_LOCKING_MODE), SNAPSHOT_LOCKING_MODE.defaultValueAsString());
@@ -424,7 +428,11 @@ public class MySqlConnectorConfig extends BinlogConnectorConfig {
         this.gtidSourceFilter = gtidSetIncludes != null ? Predicates.includesUuids(gtidSetIncludes)
                 : (gtidSetExcludes != null ? Predicates.excludesUuids(gtidSetExcludes) : null);
 
-        getServiceRegistry().registerServiceProvider(new MySqlCharsetRegistryServiceProvider());
+        this.originalConfig = config;
+        this.mariaDbProtocol = usesMariaDbProtocol(config);
+        getServiceRegistry().registerServiceProvider(mariaDbProtocol
+                ? new MariaDbCharsetRegistryServiceProvider()
+                : new MySqlCharsetRegistryServiceProvider());
     }
 
     public Optional<SnapshotLockingMode> getSnapshotLockingMode() {
@@ -543,5 +551,21 @@ public class MySqlConnectorConfig extends BinlogConnectorConfig {
 
         // Everything checks out ok.
         return 0;
+    }
+
+    public boolean usesMariaDbProtocol() {
+        return mariaDbProtocol;
+    }
+
+    public Configuration getOriginalConfiguration() {
+        return originalConfig;
+    }
+
+    public static boolean usesMariaDbProtocol(Configuration config) {
+        if (config.hasKey(MySqlConnectorConfig.JDBC_PROTOCOL)) {
+            final String protocol = config.getString(MySqlConnectorConfig.JDBC_PROTOCOL);
+            return !Strings.isNullOrBlank(protocol) && protocol.equalsIgnoreCase("jdbc:mariadb");
+        }
+        return false;
     }
 }
