@@ -508,6 +508,9 @@ public abstract class BinlogValueConverters extends JdbcValueConverters {
                     r.deliver(null);
                 }
             }
+            else if (data instanceof byte[]) {
+                r.deliver(new String((byte[]) data));
+            }
         });
     }
 
@@ -533,6 +536,9 @@ public abstract class BinlogValueConverters extends JdbcValueConverters {
                 // The binlog will contain a long with the indexes of the options in the set value ...
                 long indexes = ((Long) data).longValue();
                 r.deliver(convertSetValue(column, indexes, options));
+            }
+            else if (data instanceof byte[]) {
+                r.deliver(new String((byte[]) data));
             }
         });
     }
