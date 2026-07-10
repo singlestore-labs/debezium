@@ -191,7 +191,8 @@ public class MongoDbStreamingChangeEventSource implements StreamingChangeEventSo
     }
 
     protected ChangeStreamIterable<BsonDocument> initChangeStream(MongoClient client, MongoDbOffsetContext offsetContext) {
-        final ChangeStreamIterable<BsonDocument> stream = MongoUtils.openChangeStream(client, taskContext);
+        @SuppressWarnings("unchecked")
+        final ChangeStreamIterable<BsonDocument> stream = (ChangeStreamIterable<BsonDocument>) MongoUtils.openChangeStream(client, taskContext);
 
         if (connectorConfig.getCaptureMode().isFullUpdate()) {
             if (connectorConfig.getCaptureModeFullUpdateType().isPostImage()) {

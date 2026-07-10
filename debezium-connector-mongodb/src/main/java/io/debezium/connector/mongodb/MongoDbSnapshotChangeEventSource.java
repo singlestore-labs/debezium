@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.bson.BsonDocument;
 import org.bson.Document;
+import org.bson.RawBsonDocument;
 import org.bson.conversions.Bson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -185,7 +186,8 @@ public class MongoDbSnapshotChangeEventSource extends AbstractSnapshotChangeEven
     private void initSnapshotStartOffsets(MongoDbSnapshotContext snapshotCtx, MongoDbConnection mongo) throws InterruptedException {
         LOGGER.info("Determine Snapshot start offset");
         mongo.execute("Setting resume token", client -> {
-            ChangeStreamIterable<BsonDocument> stream = MongoUtils.openChangeStream(client, taskContext);
+            @SuppressWarnings("unchecked")
+            ChangeStreamIterable<BsonDocument> stream = (ChangeStreamIterable<BsonDocument>) MongoUtils.openChangeStream(client, taskContext);
             try (MongoChangeStreamCursor<ChangeStreamDocument<BsonDocument>> cursor = stream.cursor()) {
                 snapshotCtx.offset.initEvent(cursor);
             }
@@ -314,7 +316,7 @@ public class MongoDbSnapshotChangeEventSource extends AbstractSnapshotChangeEven
 
         mongo.execute("sync '" + collectionId + "'", client -> {
             final MongoDatabase database = client.getDatabase(collectionId.dbName());
-            final MongoCollection<BsonDocument> collection = database.getCollection(collectionId.name(), BsonDocument.class);
+            final MongoCollection<RawBsonDocument> collection = database.getCollection(collectionId.name(), RawBsonDocument.class);
 
             final int batchSize = connectorConfig.getSnapshotFetchSize();
 
@@ -322,7 +324,7 @@ public class MongoDbSnapshotChangeEventSource extends AbstractSnapshotChangeEven
             Optional<String> snapshotFilterForCollectionId = Optional.ofNullable(snapshotFilterQueryForCollection.get(collectionId));
             Bson filterQuery = Document.parse(snapshotFilterForCollectionId.orElse("{}"));
 
-            try (MongoCursor<BsonDocument> cursor = collection.find(filterQuery).batchSize(batchSize).iterator()) {
+            try (MongoCursor<RawBsonDocument> cursor = collection.find(filterQuery).batchSize(batchSize).iterator()) {
                 snapshotContext.lastRecordInCollection = false;
                 if (cursor.hasNext()) {
                     while (cursor.hasNext()) {

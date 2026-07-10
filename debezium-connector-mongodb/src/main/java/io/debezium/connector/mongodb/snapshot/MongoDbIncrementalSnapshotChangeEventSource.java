@@ -28,6 +28,7 @@ import org.apache.kafka.connect.data.Struct;
 import org.bson.BsonBinarySubType;
 import org.bson.BsonDocument;
 import org.bson.Document;
+import org.bson.RawBsonDocument;
 import org.bson.UuidRepresentation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -537,7 +538,9 @@ public class MongoDbIncrementalSnapshotChangeEventSource
             final int threads = connectorConfig.getSnapshotMaxThreads();
             final int chunkSize = connectorConfig.getIncrementalSnapshotChunkSize();
             final MongoDatabase database = client.getDatabase(collectionId.dbName());
-            final MongoCollection<BsonDocument> collection = database.getCollection(collectionId.name(), BsonDocument.class);
+            final MongoCollection<? extends BsonDocument> collection = connectorConfig.rawBsonFetchEnabled()
+                    ? database.getCollection(collectionId.name(), RawBsonDocument.class)
+                    : database.getCollection(collectionId.name(), BsonDocument.class);
 
             Document predicate = constructQueryPredicate(context.chunkEndPosititon(), context.maximumKey().get(),
                     getAdditionalConditions());
@@ -597,7 +600,7 @@ public class MongoDbIncrementalSnapshotChangeEventSource
         });
     }
 
-    protected Object[] addChunkToExecutor(final MongoCollection<BsonDocument> collection, Object[] lastRow,
+    protected Object[] addChunkToExecutor(final MongoCollection<? extends BsonDocument> collection, Object[] lastRow,
                                           List<Future<?>> futureList, Object[] lastChunkKey) {
         final Object[] chunkStartKey = lastChunkKey;
         final Object[] chunkEndKey = keyFromRow(lastRow);
@@ -607,7 +610,7 @@ public class MongoDbIncrementalSnapshotChangeEventSource
         return chunkEndKey;
     }
 
-    private void queryChunk(MongoCollection<BsonDocument> collection, Object[] startKey, Object[] endKey) {
+    private void queryChunk(MongoCollection<? extends BsonDocument> collection, Object[] startKey, Object[] endKey) {
         Document predicate = constructQueryPredicate(startKey, endKey, getAdditionalConditions());
         LOGGER.debug("\t For collection chunk, '{}' using query: '{}', key: '{}', maximum key: '{}'", currentCollection.id(),
                 predicate.toJson(), startKey, endKey);

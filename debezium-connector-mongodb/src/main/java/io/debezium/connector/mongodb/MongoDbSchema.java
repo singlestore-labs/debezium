@@ -76,16 +76,17 @@ public class MongoDbSchema implements DatabaseSchema<CollectionId> {
         return collections.computeIfAbsent(collectionId, id -> {
             final FieldFilter fieldFilter = filters.fieldFilterFor(id);
             final String topicName = topicNamingStrategy.dataChangeTopic(id);
+            final boolean rawBson = config.rawBsonFetchEnabled();
 
             final Schema keySchema = SchemaBuilder.struct()
                     .name(adjuster.adjust(topicName + ".Key"))
-                    .field("id", Schema.STRING_SCHEMA)
+                    .field("id", rawBson ? Schema.BYTES_SCHEMA : Schema.STRING_SCHEMA)
                     .build();
 
             final Schema valueSchema = SchemaBuilder.struct()
                     .name(adjuster.adjust(Envelope.schemaName(topicName)))
-                    .field(FieldName.BEFORE, Json.builder().optional().build())
-                    .field(FieldName.AFTER, Json.builder().optional().build())
+                    .field(FieldName.BEFORE, rawBson ? Schema.OPTIONAL_BYTES_SCHEMA : Json.builder().optional().build())
+                    .field(FieldName.AFTER, rawBson ? Schema.OPTIONAL_BYTES_SCHEMA : Json.builder().optional().build())
                     // Change Streams field
                     .field(MongoDbFieldName.UPDATE_DESCRIPTION, UPDATED_DESCRIPTION_SCHEMA)
                     .field(FieldName.SOURCE, sourceSchema)
@@ -106,10 +107,10 @@ public class MongoDbSchema implements DatabaseSchema<CollectionId> {
                     id,
                     fieldFilter,
                     keySchema,
-                    serialization::getDocumentId,
+                    rawBson ? RawBytesSerialization::getDocumentId : serialization::getDocumentId,
                     envelope,
                     valueSchema,
-                    serialization::getDocumentValue);
+                    rawBson ? RawBytesSerialization::getDocumentValue : serialization::getDocumentValue);
         });
     }
 

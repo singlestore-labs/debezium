@@ -22,6 +22,9 @@ import org.apache.kafka.common.config.ConfigDef.Width;
 import org.apache.kafka.connect.data.Struct;
 import org.bson.BsonTimestamp;
 import org.bson.Document;
+import org.bson.RawBsonDocument;
+import org.bson.codecs.DecoderContext;
+import org.bson.codecs.DocumentCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -922,6 +925,17 @@ public class MongoDbConnectorConfig extends CommonConnectorConfig implements Sha
                     + "For 'database' scope, this is the database name. "
                     + "For 'collection' scope, this is the collection name as <databaseName>.<collectionName>.");
 
+    public static final Field FETCH_RAW_DOCUMENTS = Field.create("fetch.raw.documents")
+            .withDisplayName("Request RawBsonDocument type for documents from MongoDB driver")
+            .withType(Type.BOOLEAN)
+            .withGroup(Field.createGroupEntry(Field.Group.CONNECTOR_ADVANCED, 5))
+            .withWidth(Width.SHORT)
+            .withImportance(Importance.LOW)
+            .withDefault(false)
+            .withValidation(Field::isBoolean)
+            .withDescription("Enabling this mode will instruct connector to fetch raw BSON blobs and limit " +
+                    "parsing of the documents. This parameter affects schema of the record.");
+
     protected static final Field TASK_ID = Field.create("mongodb.task.id")
             .withDescription("Internal use only")
             .withDefault(0)
@@ -1041,6 +1055,7 @@ public class MongoDbConnectorConfig extends CommonConnectorConfig implements Sha
                     FIELD_EXCLUDE_LIST,
                     FIELD_RENAMES,
                     SNAPSHOT_FILTER_QUERY_BY_COLLECTION,
+                    FETCH_RAW_DOCUMENTS,
                     SOURCE_INFO_STRUCT_MAKER)
             .connector(
                     SNAPSHOT_MODE,
@@ -1087,6 +1102,7 @@ public class MongoDbConnectorConfig extends CommonConnectorConfig implements Sha
     private final OversizeHandlingMode oversizeHandlingMode;
     private final FiltersMatchMode filtersMatchMode;
     private final int oversizeSkipThreshold;
+    private final boolean fetchRawDocuments;
 
     public MongoDbConnectorConfig(Configuration config) {
         super(config, DEFAULT_SNAPSHOT_FETCH_SIZE);
@@ -1140,6 +1156,7 @@ public class MongoDbConnectorConfig extends CommonConnectorConfig implements Sha
 
         this.snapshotMaxThreads = resolveSnapshotMaxThreads(config);
         this.cursorMaxAwaitTimeMs = config.getInteger(MongoDbConnectorConfig.CURSOR_MAX_AWAIT_TIME_MS, 0);
+        this.fetchRawDocuments = config.getBoolean(MongoDbConnectorConfig.FETCH_RAW_DOCUMENTS, false);
     }
 
     private static int validateChangeStreamPipeline(Configuration config, Field field, ValidationOutput problems) {
@@ -1391,6 +1408,10 @@ public class MongoDbConnectorConfig extends CommonConnectorConfig implements Sha
         return filtersMatchMode;
     }
 
+    public boolean rawBsonFetchEnabled() {
+        return fetchRawDocuments;
+    }
+
     @Override
     public int getSnapshotMaxThreads() {
         return snapshotMaxThreads;
@@ -1441,14 +1462,20 @@ public class MongoDbConnectorConfig extends CommonConnectorConfig implements Sha
         return config.getInteger(SNAPSHOT_MAX_THREADS);
     }
 
+    private static Document rawToDocument(byte[] raw) {
+        var rawBson = new RawBsonDocument(raw);
+        var codec = new DocumentCodec();
+        return codec.decode(rawBson.asBsonReader(), DecoderContext.builder().build());
+    }
+
     @Override
     public Optional<String[]> parseSignallingMessage(Struct value, String fieldName) {
-        final String event = value.getString(fieldName);
+        final var event = value.get(fieldName);
         if (event == null) {
             LOGGER.warn("Field {} part of signal '{}' is missing", fieldName, value);
             return Optional.empty();
         }
-        final Document fields = Document.parse(event);
+        final Document fields = rawBsonFetchEnabled() ? rawToDocument((byte[]) event) : Document.parse((String) event);
         if (fields.size() != 3) {
             LOGGER.warn("The signal event '{}' should have 3 fields but has {}", event, fields.size());
             return Optional.empty();

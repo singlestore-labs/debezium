@@ -213,7 +213,7 @@ public final class MongoDbConnection implements AutoCloseable {
 
         try {
             return execute("Checking change stream", client -> {
-                ChangeStreamIterable<BsonDocument> stream = MongoUtils.openChangeStream(client, taskContext);
+                ChangeStreamIterable<? extends BsonDocument> stream = MongoUtils.openChangeStream(client, taskContext);
                 stream.resumeAfter(token);
 
                 try (var ignored = stream.cursor()) {

@@ -13,6 +13,7 @@ import java.util.function.Predicate;
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
 import org.bson.Document;
+import org.bson.RawBsonDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -210,7 +211,7 @@ public class MongoUtils {
      * @param taskContext task context
      * @return change stream iterable
      */
-    public static ChangeStreamIterable<BsonDocument> openChangeStream(MongoClient client, MongoDbTaskContext taskContext) {
+    public static ChangeStreamIterable<? extends BsonDocument> openChangeStream(MongoClient client, MongoDbTaskContext taskContext) {
         var config = taskContext.getConfig();
         final ChangeStreamPipeline pipeline = new ChangeStreamPipelineFactory(config, taskContext.getFilters().getConfig()).create();
 
@@ -218,7 +219,10 @@ public class MongoUtils {
         if (config.getCaptureScope() == MongoDbConnectorConfig.CaptureScope.DATABASE) {
             var database = config.getCaptureTarget().orElseThrow();
             LOGGER.info("Change stream is restricted to '{}' database", database);
-            return client.getDatabase(database).watch(pipeline.getStages(), BsonDocument.class);
+            if (config.rawBsonFetchEnabled())
+                return client.getDatabase(database).watch(pipeline.getStages(), RawBsonDocument.class);
+            else
+                return client.getDatabase(database).watch(pipeline.getStages(), BsonDocument.class);
         }
 
         // capture scope is collection
@@ -231,7 +235,10 @@ public class MongoUtils {
         }
 
         // capture scope is deployment
-        return client.watch(pipeline.getStages(), BsonDocument.class);
+        if (config.rawBsonFetchEnabled())
+            return client.watch(pipeline.getStages(), RawBsonDocument.class);
+        else
+            return client.watch(pipeline.getStages(), BsonDocument.class);
     }
 
     public static BsonTimestamp hello(MongoClient client, String dbName) {
