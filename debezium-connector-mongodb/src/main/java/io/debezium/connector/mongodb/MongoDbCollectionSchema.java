@@ -38,11 +38,11 @@ public class MongoDbCollectionSchema implements DataCollectionSchema {
     private final Envelope envelopeSchema;
     private final Schema valueSchema;
     private final Function<BsonDocument, Object> keyGenerator;
-    private final Function<BsonDocument, String> valueGenerator;
+    private final Function<BsonDocument, Object> valueGenerator;
 
     public MongoDbCollectionSchema(CollectionId id, FieldFilter fieldFilter, Schema keySchema,
                                    Function<BsonDocument, Object> keyGenerator, Envelope envelopeSchema, Schema valueSchema,
-                                   Function<BsonDocument, String> valueGenerator) {
+                                   Function<BsonDocument, Object> valueGenerator) {
         this.id = id;
         this.fieldFilter = fieldFilter;
         this.keySchema = keySchema;
@@ -79,8 +79,8 @@ public class MongoDbCollectionSchema implements DataCollectionSchema {
         Struct value = new Struct(valueSchema);
         switch (operation) {
             case READ:
-                final String jsonStr = valueGenerator.apply(fieldFilter.apply(document));
-                value.put(FieldName.AFTER, jsonStr);
+                final var after = valueGenerator.apply(fieldFilter.apply(document));
+                value.put(FieldName.AFTER, after);
                 break;
         }
         return value;
@@ -152,13 +152,13 @@ public class MongoDbCollectionSchema implements DataCollectionSchema {
     }
 
     private void extractFullDocument(ChangeStreamDocument<BsonDocument> document, Struct value) {
-        final String fullDocStr = valueGenerator.apply(fieldFilter.apply(document.getFullDocument()));
-        value.put(FieldName.AFTER, fullDocStr);
+        final var fullDoc = valueGenerator.apply(fieldFilter.apply(document.getFullDocument()));
+        value.put(FieldName.AFTER, fullDoc);
     }
 
     private void extractFullDocumentBeforeChange(ChangeStreamDocument<BsonDocument> document, Struct value) {
-        final String fullDocBeforeChangeStr = valueGenerator.apply(fieldFilter.apply(document.getFullDocumentBeforeChange()));
-        value.put(FieldName.BEFORE, fullDocBeforeChangeStr);
+        final var fullDocBeforeChange = valueGenerator.apply(fieldFilter.apply(document.getFullDocumentBeforeChange()));
+        value.put(FieldName.BEFORE, fullDocBeforeChange);
     }
 
     @Override
