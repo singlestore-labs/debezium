@@ -17,10 +17,9 @@
     <url>https://debezium.io</url>
 
     <scm>
-        <connection>scm:git:git@github.com:debezium/debezium.git</connection>
-        <developerConnection>scm:git:git@github.com:debezium/debezium.git</developerConnection>
-        <url>https://github.com/debezium/debezium</url>
-        <tag>HEAD</tag>
+        <connection>scm:git:git@github.com:singlestore-labs/debezium.git</connection>
+        <developerConnection>scm:git:git@github.com:singlestore-labs/debezium.git</developerConnection>
+        <url>https://github.com/singlestore-labs/debezium</url>
     </scm>
 
     <issueManagement>
@@ -338,20 +337,6 @@
                     <pushChanges>false</pushChanges>
                     <releaseProfiles>docs,assembly,release-sign-artifacts,release</releaseProfiles>
                 </configuration>
-            </plugin>
-            <plugin>
-                  <groupId>org.sonatype.central</groupId>
-                  <artifactId>central-publishing-maven-plugin</artifactId>
-                  <extensions>true</extensions>
-                  <configuration>
-                        <centralSnapshotsUrl>${publish.snapshot.url}</centralSnapshotsUrl>
-                        <publishingServerId>${publish.repository.id}</publishingServerId>
-                        <autoPublish>${publish.auto}</autoPublish>
-                        <skipPublishing>${publish.skip}</skipPublishing>
-                        <waitUntil>${publish.wait.until}</waitUntil>
-                        <waitMaxTime>${publish.wait.timeout}</waitMaxTime>
-                        <waitPollingInterval>${publish.poll.interval}</waitPollingInterval>
-                  </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
