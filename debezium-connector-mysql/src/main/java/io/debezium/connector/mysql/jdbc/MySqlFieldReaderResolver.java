@@ -28,7 +28,7 @@ public final class MySqlFieldReaderResolver {
      */
     public static BinlogFieldReader resolve(MySqlConnectorConfig connectorConfig) {
         if (connectorConfig.usesMariaDbProtocol()) {
-            return new MariaDbFieldReader(new MariaDbConnectorConfig(connectorConfig.getOriginalConfiguration()));
+            return new MariaDbFieldReader(connectorConfig);
         }
         if (connectorConfig.useCursorFetch()) {
             return new MySqlBinaryProtocolFieldReader(connectorConfig);

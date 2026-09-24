@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.Objects;
 
+import io.debezium.connector.binlog.BinlogConnectorConfig;
 import io.debezium.connector.binlog.jdbc.BinlogFieldReader;
 import io.debezium.connector.mariadb.MariaDbConnectorConfig;
 import io.debezium.relational.Column;
@@ -22,7 +23,7 @@ import io.debezium.relational.Table;
  */
 public class MariaDbFieldReader extends BinlogFieldReader {
 
-    public MariaDbFieldReader(MariaDbConnectorConfig connectorConfig) {
+    public MariaDbFieldReader(BinlogConnectorConfig connectorConfig) {
         super(connectorConfig);
     }
 
