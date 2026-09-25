@@ -10,7 +10,7 @@
 
     <groupId>io.debezium</groupId>
     <artifactId>debezium-build-parent</artifactId>
-    <version>3.6.3.S2.0</version>
+    <version>3.6.3.S2.1-SNAPSHOT</version>
     <name>Debezium Build Aggregator</name>
     <description>Debezium is an open source change data capture platform</description>
     <packaging>pom</packaging>
@@ -20,7 +20,7 @@
         <connection>scm:git:git@github.com:singlestore-labs/debezium.git</connection>
         <developerConnection>scm:git:git@github.com:singlestore-labs/debezium.git</developerConnection>
         <url>https://github.com/singlestore-labs/debezium</url>
-      <tag>v3.6.3.S2.0</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <issueManagement>
